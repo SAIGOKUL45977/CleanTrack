@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">CleanTrack</string>
+    <string name="app_description">CleanTrack — report garbage issues with live photo and GPS, and track their status.</string>
+</resources>

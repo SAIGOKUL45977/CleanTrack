@@ -1,0 +1,6 @@
+{
+  "name": "CleanTrack",
+  "description": "CleanTrack — report garbage issues with live photo and GPS, and track their status.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
