@@ -36,11 +36,12 @@ fun AuthScreen(
     modifier: Modifier = Modifier
 ) {
     val authError by viewModel.authError.collectAsState()
+    val isAuthenticating by viewModel.isAuthenticating.collectAsState()
     var isRegistering by remember { mutableStateOf(false) }
 
     var citizenName by remember { mutableStateOf("") }
-    var citizenEmail by remember { mutableStateOf("citizen@cleantrack.org") }
-    var citizenPassword by remember { mutableStateOf("password") }
+    var citizenEmail by remember { mutableStateOf("") }
+    var citizenPassword by remember { mutableStateOf("") }
 
     Scaffold { paddingValues ->
         Box(
@@ -182,10 +183,11 @@ fun AuthScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isAuthenticating
                         ) {
                             Text(
-                                text = if (isRegistering) "Create Account" else "Sign In",
+                                text = if (isAuthenticating) "Please wait…" else if (isRegistering) "Create Account" else "Sign In",
                                 fontWeight = FontWeight.Bold
                             )
                         }

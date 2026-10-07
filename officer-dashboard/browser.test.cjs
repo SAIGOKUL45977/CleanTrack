@@ -1,0 +1,71 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+(async () => {
+ fs.mkdirSync('test-results', { recursive: true });
+ const browser = await chromium.launch({headless:true});
+ const page = await browser.newPage({viewport:{width:1440,height:1160}});
+ const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+ let citizen=false, saves=0, uploaded=false;
+ let report={id:1,citizen_id:'citizen-id',citizen_name:'Citizen A · test account',category:'Overflowing Waste Bin',photo_path:'citizen-id/reports/photo.jpg',resolution_photo_path:null,latitude:16.1875,longitude:81.1380,location_address:'Local QA location · coordinates are test data',description:'Local browser test fixture. These records do not represent field results.',status:'Submitted',verification_status:'Manual review; AI screening not configured',assigned_to:null,created_at:'2026-10-07T03:00:00+00:00',updated_at:'2026-10-07T03:00:00.000001+00:00'};
+ const history=[{id:1,complaint_id:1,status:'Submitted',note:'Test citizen report',created_at:report.created_at}];
+ const session={access_token:'test-token',refresh_token:'test-refresh',expires_at:9999999999,user:{id:'officer-id'}};
+ await page.route('https://fonts.googleapis.com/**',route=>route.abort());
+ await page.route('https://fonts.gstatic.com/**',route=>route.abort());
+ await page.route('https://pilot.supabase.co/**',async route=>{
+   const request=route.request(),url=new URL(request.url()),path=url.pathname;
+   let data;
+   if(path==='/auth/v1/token') data=session;
+   else if(path==='/auth/v1/user') data={id:'officer-id'};
+   else if(path==='/auth/v1/logout') data=null;
+   else if(path==='/rest/v1/profiles') data=url.searchParams.has('id')?[{id:'officer-id',full_name:'Officer A · test account',role:citizen?'citizen':'officer'}]:[{id:'officer-id',full_name:'Officer A'}];
+   else if(path==='/rest/v1/complaints') data=[report];
+   else if(path==='/rest/v1/complaint_events') data=history;
+   else if(path==='/storage/v1/object/sign/mock.jpg') {
+     await route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="650" height="350"><rect width="650" height="350" fill="#dceae5"/><rect x="240" y="100" width="170" height="145" rx="12" fill="#327f6c"/><text x="325" y="180" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">LOCAL QA</text><text x="325" y="290" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#23443a">Test image · no field evidence</text></svg>'});return;
+   } else if(path.startsWith('/storage/v1/object/sign/')) data={signedURL:'/object/sign/mock.jpg?token=test'};
+   else if(path.startsWith('/storage/v1/object/complaint-images/')) {uploaded=true;data={Key:path};}
+   else if(path==='/rest/v1/rpc/officer_update_complaint') {
+     const body=request.postDataJSON();
+     assert.equal(body.p_expected_updated_at,report.updated_at);
+     if(body.p_status==='Resolved') assert.ok(uploaded && body.p_resolution_photo_path);
+     saves++;
+     report={...report,status:body.p_status,assigned_to:body.p_assigned_to,resolution_photo_path:body.p_resolution_photo_path||report.resolution_photo_path,updated_at:`2026-10-07T03:01:0${saves}.000001+00:00`};
+     history.push({id:history.length+1,complaint_id:1,status:report.status,note:body.p_note,created_at:report.updated_at}); data=[report];
+   } else throw new Error('Unexpected URL '+url);
+   await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(data)});
+ });
+ await page.goto(process.env.DASHBOARD_TEST_URL || 'http://127.0.0.1:8000');
+ await page.fill('#project-url','https://pilot.supabase.co');await page.fill('#project-key','sb_publishable_test');
+ await page.screenshot({path:'test-results/dashboard-login.png',fullPage:true});
+ citizen=true;await page.fill('#email','citizen@example.com');await page.fill('#password','password123');await page.click('#login-button');
+ await page.waitForFunction(()=>document.getElementById('login-error').textContent.includes('Officer access'));
+ assert.equal(await page.isVisible('#desk-view'),false);
+ citizen=false;await page.fill('#email','officer@example.com');await page.fill('#password','password123');await page.click('#login-button');
+ await page.waitForFunction(()=>document.getElementById('detail-category').textContent==='Overflowing Waste Bin');
+ await page.waitForFunction(()=>document.getElementById('history-list').textContent.includes('Test citizen report'));
+ assert.equal(await page.textContent('#count-all'),'1');
+ await page.selectOption('#update-status','In Progress');await page.selectOption('#assigned-officer','officer-id');
+ await page.fill('#officer-note','Test update: cleanup assigned to Officer A.');await page.click('#save-button');
+ await page.waitForFunction(()=>document.getElementById('detail-status').textContent==='In Progress');
+ await page.selectOption('#update-status','Resolved');await page.fill('#officer-note','Test update: cleanup photo attached.');
+ // No resolution photo: UI/API must refuse the transition.
+ await page.click('#save-button');await page.waitForFunction(()=>document.getElementById('save-status').textContent.includes('cleanup photo'));
+ assert.equal(saves,1);
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRuoAAAAASUVORK5CYII=','base64');
+ await page.setInputFiles('#cleanup-file',{name:'cleanup-test.png',mimeType:'image/png',buffer:png});
+ await page.click('#save-button');await page.waitForFunction(()=>document.getElementById('detail-status').textContent==='Resolved');
+ await page.waitForFunction(()=>document.getElementById('history-list').textContent.includes('cleanup photo attached'));
+ assert.equal(saves,2);assert.equal(await page.textContent('#count-resolved'),'1');
+ await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true});
+ await page.fill('#search','no-such-report');assert.ok((await page.textContent('#queue-list')).includes('No reports match'));
+ await page.fill('#search','');
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:'test-results/dashboard-mobile.png',fullPage:true});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+ await page.click('#logout');assert.equal(await page.isVisible('#login-view'),true);
+ assert.equal(await page.evaluate(()=>sessionStorage.getItem('cleantrack_session')),null);
+ assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({browser_tests:'passed',checks:['citizen denied officer access','officer login and complaint load','assignment and status save','resolve refused without evidence','photo upload and resolution','history and KPI update','search empty state','390px layout without horizontal overflow','logout clears session'],saves,pageErrors:errors}));
+ await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
