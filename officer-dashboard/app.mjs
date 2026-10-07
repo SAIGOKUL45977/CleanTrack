@@ -1,4 +1,5 @@
 import { CleanTrackApi, CATEGORIES, STATUSES, TRANSITIONS } from './api.mjs';
+import { DEFAULT_CONFIG } from './config.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, className, text) => { const n = document.createElement(tag); if (className) n.className = className; if (text !== undefined) n.textContent = text; return n; };
 const option = (text, value = text) => { const n = el('option', '', text); n.value = value; return n; };
@@ -11,8 +12,8 @@ const badge = (node, status) => {
 for (const s of STATUSES) $('filter-status').append(option(s));
 for (const c of CATEGORIES) $('filter-category').append(option(c));
 const saved = read(localStorage, 'cleantrack_config');
-$('project-url').value = saved?.url || '';
-$('project-key').value = saved?.key || '';
+$('project-url').value = saved?.url || DEFAULT_CONFIG.url;
+$('project-key').value = saved?.key || DEFAULT_CONFIG.key;
 $('connection').open = !saved;
 let api = null, profile = null, records = [], officers = [], selectedId = null, editorRecord = null;
 let dirty = false, polling = null, refreshing = false, saving = false, epoch = 0, detailEpoch = 0, detailLoadedAt = 0;

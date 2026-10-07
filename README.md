@@ -14,11 +14,13 @@ The citizen signs in, captures a real photo and device location, and submits a r
 
 ## Setup
 
-1. Create a Supabase project. Run the migration in its SQL Editor.
+The Android defaults and dashboard now contain the public client configuration for `cleantrack-csp` (`gkdksqpxkzxeqmzurhub`). On 7 October 2026, the project's Auth settings API accepted the supplied publishable key: email sign-in and signup are enabled, and email confirmation is required. The Data API returned `PGRST205` for `public.profiles`; the CleanTrack schema is not yet available through that API. Client configuration alone does not create the database or complete a live migration.
+
+1. Open the existing Supabase project. Run the migration in its SQL Editor.
 2. Create citizen and officer email/password accounts in Supabase Auth. Confirm their email addresses. Replace the placeholder email in `supabase/promote-officer.sql` and run it for the officer account.
-3. Copy `.env.example` to `.env`. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to this project's public client configuration. Never use `service_role`, `sb_secret_*`, or a Gemini secret in either client.
+3. Android reads the configured `.env.example` defaults. If your AI Studio project already has a `.env`, update its `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to match because `.env` overrides the defaults. These are Android Gradle property names; do not use the Next.js `NEXT_PUBLIC_` prefixes here. Never use `service_role`, `sb_secret_*`, or a Gemini secret in either client.
 4. Apply the Android changes to your existing Google AI Studio Android project, or open this project in Android Studio. Build and install it on a physical phone. The source export does not include a Gradle wrapper; use AI Studio's managed build or the Gradle/SDK setup provided by Android Studio.
-5. Run the dashboard locally: `python3 -m http.server 8000 --directory officer-dashboard`. Open `http://localhost:8000`. Enter the same Supabase URL/public key and sign in as the officer. Serve the folder over HTTPS for a live pilot.
+5. Run the dashboard locally: `python3 -m http.server 8000 --directory officer-dashboard`. Open `http://localhost:8000`. Its connection fields are prefilled from `config.mjs`. Check that they still match this project if your browser has an older saved configuration, then sign in as the officer. Serve the folder over HTTPS for a live pilot.
 6. Complete the phone/dashboard test in the handoff guide before describing the shared flow as operational.
 
 ## Validation completed

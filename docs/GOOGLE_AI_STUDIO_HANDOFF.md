@@ -19,6 +19,8 @@ The prepared source is based on the repository and archive you shared. If you ha
 
 Both clients need the same Supabase project URL and public publishable/legacy anon key. They do not connect directly to one another. They read and update shared records through Supabase.
 
+The prepared Android `.env.example` and officer `config.mjs` now use your existing `cleantrack-csp` project at `https://gkdksqpxkzxeqmzurhub.supabase.co`. The supplied publishable key was accepted by the Auth settings API on 7 October 2026. Email signup is enabled and confirmation is required. The Data API could not find `public.profiles` in its schema cache; run the migration below before testing complaints. No user accounts, complaints, or database schema were created by this read-only connection check.
+
 ## 2 Supabase setup order
 
 1. Create your Supabase project. Record its project URL and public publishable key. The legacy anon key is also supported. Do not select a secret/service-role key.
@@ -27,8 +29,8 @@ Both clients need the same Supabase project URL and public publishable/legacy an
 4. Create and confirm three test accounts: citizen A, citizen B, and officer A. Registration creates a citizen profile even if a client submits a role in signup metadata.
 5. Replace `REPLACE_WITH_OFFICER_EMAIL` in `supabase/promote-officer.sql` with officer A's actual account email, then run that script as administrator.
 6. Keep citizen A and citizen B as citizens. Do not expose a role selector in either client.
-7. In the Android project's `.env`, set the project URL and public key. `.env.example` shows the exact property names. Rebuild after editing them.
-8. In the dashboard's Supabase connection section, enter the same URL and public key. The public configuration is remembered on that browser; the login session is stored for that tab/session.
+7. The prepared Android `.env.example` already contains this project's public values. Update any existing AI Studio `.env` to match using `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (without `NEXT_PUBLIC_`). Rebuild after editing them.
+8. The prepared dashboard's connection section is prefilled from `config.mjs`. Check the values if the browser remembers an older project. The public configuration is remembered on that browser; the login session is stored for that tab/session.
 
 The prepared clients use Supabase's REST APIs, available under `/auth/v1`, `/rest/v1`, and `/storage/v1`. Camera, location, or network errors produce an error/retry flow instead of a fabricated complaint.
 
