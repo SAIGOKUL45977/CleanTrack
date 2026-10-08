@@ -1,6 +1,6 @@
 # CleanTrack Supabase migration and Google AI Studio guide
 
-Keep the existing Google AI Studio Android citizen app. Replace its Firebase backend configuration and local complaint flow with Supabase, then connect a separate officer web app to the same project. The first milestone is a real citizen-to-officer-to-citizen update. Add AI screening after this flow passes live testing.
+Keep the existing Google AI Studio Android citizen app. Apply the prepared Supabase integration and use the separate officer web dashboard with the same project. The first milestone is a real citizen-to-officer-to-citizen update. Add AI screening after this flow passes live testing. For the shortest next-step checklist, read [../START_HERE.md](../START_HERE.md).
 
 The prepared source is based on the repository and archive you shared. If you have made newer changes inside AI Studio, keep those changes and adapt the migration to that newer code. Download a backup ZIP of the current AI Studio project before editing.
 
@@ -19,14 +19,18 @@ The prepared source is based on the repository and archive you shared. If you ha
 
 Both clients need the same Supabase project URL and public publishable/legacy anon key. They do not connect directly to one another. They read and update shared records through Supabase.
 
-The prepared Android `.env.example` and officer `config.mjs` now use your existing `cleantrack-csp` project at `https://gkdksqpxkzxeqmzurhub.supabase.co`. The supplied publishable key was accepted by the Auth settings API on 7 October 2026. Email signup is enabled and confirmation is required. The Data API could not find `public.profiles` in its schema cache; run the migration below before testing complaints. No user accounts, complaints, or database schema were created by this read-only connection check.
+The prepared Android `.env.example` and officer `config.mjs` use the existing `cleantrack-csp` project at `https://gkdksqpxkzxeqmzurhub.supabase.co`. As checked on 8 October 2026, all three tables exist with RLS enabled, the private `complaint-images` bucket and guarded RPCs are installed, and the confirmed citizen/officer accounts have the correct roles. No complaints exist yet. Email signup requires confirmation. The earlier missing-schema error has been resolved.
 
-## 2 Supabase setup order
+## 2 Existing setup and fresh-project setup order
+
+**Your current project is already configured. Skip steps 1–5 below.** Continue with the Android configuration/build and dashboard test. An optional second citizen test account is still needed to prove account isolation through real authenticated API requests.
+
+The following setup order is retained only for a separate fresh project:
 
 1. Create your Supabase project. Record its project URL and public publishable key. The legacy anon key is also supported. Do not select a secret/service-role key.
 2. Open SQL Editor and run `supabase/migrations/202610070001_cleantrack.sql` from the prepared branch.
 3. Check that `profiles`, `complaints`, and `complaint_events` exist and RLS is enabled. Check Storage: `complaint-images` must be private and have a 5 MB limit.
-4. Create and confirm three test accounts: citizen A, citizen B, and officer A. Registration creates a citizen profile even if a client submits a role in signup metadata.
+4. Create and confirm three test accounts: citizen A, citizen B, and officer A. Registration creates a citizen profile even if a client submits a role in signup metadata. The existing project already has citizen A and officer A; do not recreate them.
 5. Replace `REPLACE_WITH_OFFICER_EMAIL` in `supabase/promote-officer.sql` with officer A's actual account email, then run that script as administrator.
 6. Keep citizen A and citizen B as citizens. Do not expose a role selector in either client.
 7. The prepared Android `.env.example` already contains this project's public values. Update any existing AI Studio `.env` to match using `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (without `NEXT_PUBLIC_`). Rebuild after editing them.
@@ -72,10 +76,10 @@ label is "Manual review; AI screening not configured".
 
 Build the app and resolve actual compiler errors. Check real login, invalid login,
 registration with email confirmation, restored session, failed upload/retry, and
-logout. The AI Studio Android emulator does not provide real camera capture or
-Google Play services, so leave camera/GPS acceptance for a physical phone. Report
+logout. Emulator checks do not replace actual camera/GPS acceptance on a physical
+phone. Report
 what was actually tested and what remains. Do not claim the backend works before
-we provide the project configuration and complete the two-device test.
+we complete the two-device test. The supplied project is already configured.
 ```
 
 The changed source includes `SupabaseApi.kt`, `EncryptedSessionStore.kt`, `CleanTrackRepository.kt`, the ViewModel, login defaults, complaint detail refresh, camera/GPS error handling, backup exclusions, `.env.example`, and Gradle cleanup.
@@ -83,6 +87,8 @@ The changed source includes `SupabaseApi.kt`, `EncryptedSessionStore.kt`, `Clean
 ## 4 Officer dashboard
 
 The prepared `officer-dashboard/` folder can run as a static website. Test it locally first. For a Google AI Studio web project, use a separate project so the officer interface is independent of the Android app.
+
+The officer dashboard is already included; a second AI Studio build is optional. To run the supplied version, use `start-officer-dashboard.cmd` on Windows, or serve the folder from the project root with `python3 -m http.server 8000 --bind 127.0.0.1 --directory officer-dashboard`. Open `http://localhost:8000`. The officer account is already provisioned. The current assignment field selects a responsible officer; put field-team details in the note until a team directory is implemented.
 
 ```text
 Create a responsive CleanTrack officer WEB dashboard connected to my existing
@@ -120,7 +126,7 @@ edits, session expiration, and logout. Connect to the same Supabase project as
 my citizen Android app and perform the live two-device test below.
 ```
 
-## 5 Live acceptance test before the review/demo
+## 5 Live acceptance test before claiming the integration works
 
 | Action | Required result |
 | --- | --- |
@@ -137,33 +143,35 @@ my citizen Android app and perform the live two-device test below.
 | Unmodified submission is retried after a lost response | Same complaint ID, no duplicate report in that wizard session |
 | Officer logs out and citizen restarts the app | Officer session clears; citizen session restore uses secure saved tokens |
 
-For RLS tests, use the actual citizen JWT/public key through the API. An administrator SQL query bypasses RLS and does not prove citizen isolation. This pilot authorizes each officer across the whole project queue; ward-based access is not implemented.
+For final RLS acceptance, use the actual citizen JWT/public key through the API. An administrator SQL query bypasses RLS and does not prove citizen isolation. Checks already performed used `SET LOCAL ROLE authenticated` plus request-JWT claims inside rolled-back transactions; these confirmed selected role/visibility/RPC guards, but do not replace real login and photo-access testing. This pilot authorizes each officer across the whole project queue; ward-based access is not implemented.
 
 ## 6 Migration of any existing Firebase data
 
-The shared repository currently uses Room for login/complaint records and has Firebase dependencies. Its seeded records and simulated statuses are not imported into Supabase. Your current AI Studio project may contain newer Firebase integration not present in that export.
+The originally supplied source used Room for login/complaint records and included Firebase dependencies. This migration changes the active flow to Supabase; unused Room compatibility classes remain. Seeded records and simulated statuses are not imported. Your current AI Studio project may contain newer Firebase integration not present in the original export.
 
 If there are real Firebase Auth users, Firestore complaints, or Storage photos, first export them and inspect the fields. Preserve an old-ID-to-new-ID mapping, move photos into private storage, reconstruct truthful status events, and plan account migration/password reset with the actual Firebase Auth configuration. Do not silently discard real records or copy demo records into the pilot. This separate historical-data migration is not included in the prepared code.
 
-## 7 What to say in the CSP review and change in report/PPT
+## 7 Accurate progress wording
 
 Use this technology wording:
 
 "The citizen app is built in Kotlin and Jetpack Compose using Google AI Studio.
-We have selected Supabase Auth, PostgreSQL, and private Storage for the shared
-backend. The officer dashboard will use the same complaint records. The migration
-code is prepared; project configuration and real-device end-to-end testing are
-in progress. AI relevance screening is a later server-side integration."
+Our Supabase project has Auth accounts, PostgreSQL tables, access rules, and
+private photo storage configured. Citizen integration code and a separate officer
+dashboard are prepared. Applying the code to our current Android project, building
+the APK, and completing the real-device end-to-end test are the next steps.
+This version uses manual review; real AI screening is not deployed."
 
-After the live acceptance test actually passes, replace the middle sentence with:
+After the live acceptance test actually passes, use this demonstrated-flow wording:
 "A citizen submission reaches the officer dashboard, and officer progress and
 resolution evidence return to the citizen app through the shared Supabase project."
 
-Change Firebase Auth to Supabase Auth, Firestore to PostgreSQL, Firebase Storage to
-Supabase Storage, and Cloud Functions to Supabase Edge Functions in the technology
-and architecture sections. Describe Edge Functions/Gemini as planned until tested.
-Keep the Work Plan & Timeline slide as requested. Do not claim AI accuracy,
-authority adoption, or community impact without evidence.
+The user's Review 0 deck retains its requested Firebase framing and honest prototype
+limitations. This guide does not instruct changing that deck or its timeline. For a
+later Supabase progress report, use the actual implementation status above. Describe
+Edge Functions/Gemini, reverse-geocoded addresses, Realtime, and notifications as
+planned until implemented and tested. Do not claim AI accuracy, authority adoption,
+or community impact without evidence.
 
 For the demo: citizen A submits, officer A marks In Progress, then attaches cleanup
 evidence and resolves; citizen A refreshes and shows the same complaint ID/history.
@@ -173,10 +181,24 @@ is not evidence of an actual community cleanup.
 ## 8 Verification and remaining work
 
 Ten automated API-client tests passed locally. JavaScript syntax checks passed.
-The dashboard's browser test was prepared but could not execute because Chromium
-is unavailable here. The Android build and SQL/RLS live execution have not been
-verified. Supply the project URL/public key, run the schema in Supabase, build in
-AI Studio, and complete the physical-phone/dashboard test before deploying.
+The schema, private bucket, confirmed accounts/roles, and selected authenticated-role
+database guards were checked in the live project. No test complaints were inserted.
+The dashboard's fixture-based browser test is supplied but has not passed here:
+the Chromium download returned an incomplete archive. The Android build was not
+run because Gradle and the Android SDK are unavailable in this environment.
+Build in AI Studio or Android Studio and complete the real phone/dashboard test.
+
+Supabase advisors still flag the intentionally guarded authenticated `SECURITY
+DEFINER` functions and performance suggestions. Table writes are revoked and those
+functions check caller identity/role and validate state/evidence. This review does
+not constitute a completed production security audit. The advisory explanation is
+https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable .
+
+For local developer checks, run `node --test officer-dashboard/api.test.mjs`.
+The optional `browser.test.cjs` requires Playwright and its matching Chromium
+installation, plus a dashboard server on port 8000 (or `DASHBOARD_TEST_URL`). It
+uses intercepted, clearly labeled fixture responses; a pass does not prove the
+live Supabase/Android connection.
 
 Future tasks after the core flow passes: server-side Gemini relevance assistance
 with manual fallback, notifications, actual Realtime subscriptions, offline draft
