@@ -1,38 +1,52 @@
 # CleanTrack
 
-A Kotlin and Jetpack Compose citizen Android app with a Supabase backend and a separate officer web dashboard. This migration is prepared for configuration and live testing; it is not a deployed service.
+A Kotlin and Jetpack Compose citizen Android app, a shared Supabase backend, and a separate officer web dashboard. The migration source is prepared. The existing Supabase project is configured; applying this source to the current AI Studio app, compiling an APK, and completing the physical-phone/dashboard test are still required.
 
-## The shared flow
+**Start with [START_HERE.md](START_HERE.md).** Detailed prompts and acceptance checks are in [docs/GOOGLE_AI_STUDIO_HANDOFF.md](docs/GOOGLE_AI_STUDIO_HANDOFF.md). Project boundaries are recorded in [docs/PROJECT_CONSTRAINTS.md](docs/PROJECT_CONSTRAINTS.md).
 
-The citizen signs in, captures a real photo and device location, and submits a report. Supabase stores the private photo, complaint, and audit event. An authorized officer reviews the same record, assigns an officer, and records progress. Resolving a complaint requires a cleanup photo. The citizen sees status, notes, and resolution evidence through periodic refresh.
+## Shared workflow
 
-- `app/`: existing citizen interface, now backed by Supabase REST APIs.
-- `supabase/migrations/202610070001_cleantrack.sql`: tables, roles, RLS policies, private storage, and validated RPCs.
-- `supabase/promote-officer.sql`: administrator-only officer provisioning.
-- `officer-dashboard/`: responsive web officer desk; no npm dependencies are needed to run it.
-- `docs/GOOGLE_AI_STUDIO_HANDOFF.md`: setup order, prompts, and acceptance checks.
+The citizen signs in, captures a real photo and device GPS coordinates, and submits a report. Supabase stores the private photo, complaint, and audit event. An authorized officer reviews the same record, records an assignment/progress note, and attaches a cleanup photo before resolving it. The citizen retrieves status, notes, and resolution evidence through periodic refresh.
 
-## Setup
+- `app/`: citizen Android interface and Supabase REST integration.
+- `supabase/migrations/202610070001_cleantrack.sql`: tables, RLS, private storage, and guarded submission/update RPCs.
+- `supabase/promote-officer.sql`: administrator-only provisioning for additional officer accounts.
+- `officer-dashboard/`: static officer desk, with no production npm dependencies.
 
-The Android defaults and dashboard now contain the public client configuration for `cleantrack-csp` (`gkdksqpxkzxeqmzurhub`). On 7 October 2026, the project's Auth settings API accepted the supplied publishable key: email sign-in and signup are enabled, and email confirmation is required. The Data API returned `PGRST205` for `public.profiles`; the CleanTrack schema is not yet available through that API. Client configuration alone does not create the database or complete a live migration.
+## Existing project status — checked 8 October 2026
 
-1. Open the existing Supabase project. Run the migration in its SQL Editor.
-2. Create citizen and officer email/password accounts in Supabase Auth. Confirm their email addresses. Replace the placeholder email in `supabase/promote-officer.sql` and run it for the officer account.
-3. Android reads the configured `.env.example` defaults. If your AI Studio project already has a `.env`, update its `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to match because `.env` overrides the defaults. These are Android Gradle property names; do not use the Next.js `NEXT_PUBLIC_` prefixes here. Never use `service_role`, `sb_secret_*`, or a Gemini secret in either client.
-4. Apply the Android changes to your existing Google AI Studio Android project, or open this project in Android Studio. Build and install it on a physical phone. The source export does not include a Gradle wrapper; use AI Studio's managed build or the Gradle/SDK setup provided by Android Studio.
-5. Run the dashboard locally: `python3 -m http.server 8000 --directory officer-dashboard`. Open `http://localhost:8000`. Its connection fields are prefilled from `config.mjs`. Check that they still match this project if your browser has an older saved configuration, then sign in as the officer. Serve the folder over HTTPS for a live pilot.
-6. Complete the phone/dashboard test in the handoff guide before describing the shared flow as operational.
+The public configuration points to `cleantrack-csp` (`gkdksqpxkzxeqmzurhub`). The `profiles`, `complaints`, and `complaint_events` tables exist with RLS enabled. The `complaint-images` bucket is private, with a 5 MB JPEG/PNG/WebP limit. The profile and audit triggers and guarded RPCs are installed. A confirmed citizen account and a confirmed officer account exist; their roles were checked. No complaint records exist yet.
 
-## Validation completed
+**For this project, do not repeat the initial migration, bucket creation, or officer promotion.** Those steps are complete. Setup instructions in the detailed guide are retained for a separate fresh project.
 
-`node --test officer-dashboard/api.test.mjs`: 10 tests passed for officer gating, token refresh, logout during refresh, authorization headers, transition validation, required resolution evidence, conflict timestamps, image URL checks, pagination, and upload limits.
+The Android configuration names are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, without `NEXT_PUBLIC_`. An existing AI Studio `.env` overrides the supplied `.env.example`; check it before building. Public publishable keys belong in clients. Secret/service-role keys and Gemini secrets do not.
 
-The Android APK was not compiled in the preparation environment. The SQL migration and RLS policies were reviewed but were not executed against a Supabase project. Browser layout/interaction checks could not run because Chromium is not installed in that environment. Supabase live testing and physical-phone camera/GPS testing remain required.
+## Run the clients
 
-## Scope
+1. Back up the current AI Studio Android export. Apply the source to that existing project, preserving any newer working interface changes. This branch does not automatically update AI Studio.
+2. Build and install an APK on a physical phone. The source export has no Gradle wrapper; use AI Studio's managed Android build or Android Studio's Gradle/SDK environment.
+3. From the extracted project root, serve the dashboard: `python3 -m http.server 8000 --bind 127.0.0.1 --directory officer-dashboard`. On Windows, use `py` instead of `python3`, or run `start-officer-dashboard.cmd`.
+4. Open `http://localhost:8000`, check the prefilled project configuration, and sign in with the existing officer account.
+5. Complete the live acceptance checklist in the handoff guide. A source package and configured database are not proof that the installed APK and dashboard already communicate.
 
-This is a single-community pilot: authorized officers can see the project's full queue; citizens can read only their own reports. Android displays the latest 100 reports per citizen. The officer queue is paginated. Refresh runs every 10 seconds in the subscribed citizen screen and every 5 seconds in a visible officer tab. Supabase Realtime subscriptions, push notifications, offline queues, ward-based officer access, and server-side Gemini screening are future work.
+The supplied existing Android project is https://ai.studio/apps/25087f4d-5584-4a89-a2ef-d307235a1a68 . For eventual web hosting, serve the dashboard over HTTPS.
 
-The old local login bypass, sample complaints, random AI outcomes, and synthetic camera/GPS fallbacks are removed from the active flow. Legacy Room classes remain as unused model compatibility code; local demo rows are not migrated to the shared database. If your live Firebase project contains real records beyond the supplied source, export and map those records in a separate migration before switching users.
+## Validation and limits
 
-The supplied AI Studio project link is https://ai.studio/apps/25087f4d-5584-4a89-a2ef-d307235a1a68 . Changes in this GitHub branch do not automatically update that AI Studio project.
+Ten API-client tests pass: `node --test officer-dashboard/api.test.mjs`. They cover officer gating, refresh/session behavior, authorization headers, transitions, required resolution evidence, conflict timestamps, private-image URLs, pagination, and upload limits.
+
+Database checks used authenticated-role/JWT-claim contexts inside rolled-back SQL transactions. They confirmed the officer role, citizen-only profile visibility, denial of the officer-update RPC to a citizen, and refusal of submission without an identity. These checks do not replace real login, authenticated API requests, private-photo access, or the live two-device test.
+
+The dashboard browser test uses explicitly labeled local fixtures and does not contact the real project. It is supplied but has not passed here: the Chromium download returned an incomplete archive. Android compilation was not performed because this environment lacks Gradle and an Android SDK. Camera/GPS and end-to-end testing remain pending.
+
+Supabase advisors still report guarded `SECURITY DEFINER` function warnings and performance suggestions. The functions deliberately mediate writes while table writes are revoked; their role/identity checks were reviewed. The project is not being presented as a completed security audit or production deployment.
+
+## Pilot scope
+
+Officers can see the full project queue; citizens can read only their own reports and cannot edit/delete them after submission. Assignment currently identifies a responsible officer. Field-team details can be written in the officer note; a structured team directory is not implemented. Android retrieves the latest 100 citizen reports. Refresh is every 10 seconds in the subscribed citizen screen and every 5 seconds in a visible officer tab.
+
+AI verification is not deployed in this version. New reports say **“Manual review; AI screening not configured.”** Random AI outcomes and synthetic camera/GPS fallbacks were removed. Device coordinates are real; reverse-geocoded street addresses are future work. Realtime subscriptions, notifications, offline queues, and ward-level permissions are also future work.
+
+Legacy Room classes remain as unused model compatibility code. Local demo rows and any historical Firebase records are not imported. Back up and map any genuine Firebase data separately before switching real users.
+
+The Review 0 presentation keeps its Firebase framing as requested for that review. This migration package describes the subsequent Supabase work; it does not change the review deck or imply that planned features have been demonstrated.
