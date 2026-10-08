@@ -95,9 +95,6 @@ fun CitizenHomeScreen(
                 },
                 actions = {
                     TextButton(onClick = { viewModel.refreshComplaints() }) { Text("Refresh") }
-                    IconButton(onClick = { viewModel.logout() }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Logout")
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)

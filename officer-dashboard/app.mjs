@@ -128,6 +128,7 @@ async function selectReport(record) {
   $('detail-id').textContent = `CT-${String(record.id).padStart(4, '0')}`;
   $('detail-category').textContent = record.category; badge($('detail-status'), record.status);
   $('detail-citizen').textContent = record.citizen_name;
+  $('detail-mobile').textContent = record.citizen_mobile_number || 'Not provided in this earlier report';
   $('detail-date').textContent = formatDate(record.created_at);
   $('detail-address').textContent = record.location_address;
   $('map-link').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${Number(record.latitude)},${Number(record.longitude)}`);

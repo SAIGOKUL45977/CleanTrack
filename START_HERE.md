@@ -1,62 +1,69 @@
-# CleanTrack — your next steps
+# CleanTrack — simple CSP prototype
 
-The existing Supabase project, private photo bucket, tables, and citizen/officer roles are ready. Your next task is to apply the prepared Android source to your current Google AI Studio app and test a real report. You do not need to create another Supabase project or rerun the initial SQL.
+Your current APK still uses local storage. This revised source removes citizen email/password entry and connects citizen reports to the team-operated officer dashboard.
 
-## 1. Back up the current app
+## 1. Enable one Supabase setting
 
-Open your existing Google AI Studio Android project and download its current source ZIP. Keep that backup separately. The prepared migration is based on the source shared here; if your current project has newer screens or fixes, preserve them when applying it.
+Open [Authentication providers for your project](https://supabase.com/dashboard/project/gkdksqpxkzxeqmzurhub/auth/providers).
 
-## 2. Apply the Android migration
+Find **Anonymous Sign-Ins** and enable/save it. Navigation may say **Sign In / Providers** or **Providers**. This creates a private reporting session behind the citizen screen; the citizen does not enter an email/password.
 
-Open [docs/GOOGLE_AI_STUDIO_HANDOFF.md](docs/GOOGLE_AI_STUDIO_HANDOFF.md). Paste the Android prompt in section 3 into your existing AI Studio project, and supply the prepared source files/SQL contract using the file or code facilities available in that workspace. Tell AI Studio to compare against the current app and fix compiler errors. Do not replace the Android app with a web app.
+The existing database, private bucket, officer account, and name/mobile migration are already configured. Do not repeat the SQL setup or officer promotion.
 
-The supplied existing project link is https://ai.studio/apps/25087f4d-5584-4a89-a2ef-d307235a1a68 . A GitHub commit does not automatically update that project.
+## 2. Update your existing AI Studio Android project
 
-Check the existing `.env` or AI Studio build properties. Use these exact Android property names:
+Download a backup of its current source first. Open the existing project:
+https://ai.studio/apps/25087f4d-5584-4a89-a2ef-d307235a1a68
+
+Use the **Android prompt** in [docs/GOOGLE_AI_STUDIO_HANDOFF.md](docs/GOOGLE_AI_STUDIO_HANDOFF.md), together with the revised source and SQL contract. Preserve newer working screens. Keep the app native Android.
+
+Check build properties or an existing `.env`:
 
 ```dotenv
 SUPABASE_URL=https://gkdksqpxkzxeqmzurhub.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_XNNmhtN6Jkdnjs5f2ky5jg_fHsvUXFH
 ```
 
-These are public client values. The supplied `.env.example` already contains them, but an existing `.env` takes precedence. Rebuild after changing configuration.
+The supplied `.env.example` already has these public values. An existing `.env` overrides it. Use these exact property names without `NEXT_PUBLIC_`.
 
-## 3. Build and install the citizen APK
+## 3. Build and install the new APK
 
-Ask AI Studio to build the Android project and show the actual build result. Download and install that new APK on your physical phone. Use the existing citizen account and your own password. Grant camera and location permissions. Turn on device location and internet access.
+Ask AI Studio to build and fix actual compiler errors. Install the rebuilt APK on a physical phone. The initial screen should show **Name**, **Mobile number**, and **Continue**, with no citizen email/password fields.
 
-The older APK on your phone may still be local-only. Installing the rebuilt app is necessary; configuring Supabase alone does not update an old APK. If testing requires uninstalling the old app, first preserve any local records you need.
+Use clearly labeled test details for rehearsal. The mobile number is contact information only and is not verified. No Aadhaar is collected. Allow camera and location permissions, and turn on internet/device location.
 
-## 4. Open the officer dashboard on your laptop
+The app remembers the guest session. Complaints are accessible through that installation. Clearing app data, uninstalling, or losing the session loses access to that history; no recovery feature is included. Preserve any old local records before uninstalling an earlier APK.
 
-Extract the complete package. On Windows, double-click `start-officer-dashboard.cmd`; keep that terminal open. It requires Python 3. Alternatively, open a terminal in the project root and run:
+## 4. Run the officer dashboard
+
+Extract the full package. On Windows, double-click `start-officer-dashboard.cmd` and keep the terminal open. Python 3 is required. Or run this from the project root:
 
 ```powershell
 py -m http.server 8000 --bind 127.0.0.1 --directory officer-dashboard
 ```
 
-On macOS/Linux, use `python3` in place of `py`. Open **http://localhost:8000** in the laptop browser. The dashboard's public project configuration is prefilled; check it if the browser remembers an older project. Sign in with the existing officer account and your own password. There is no officer signup button, and another promotion is unnecessary.
+Use `python3` instead of `py` on macOS/Linux. Open **http://localhost:8000** on the laptop. Check the prefilled connection values and sign in with the already provisioned officer account and your own password. There is no officer signup button.
 
-The phone and laptop communicate through Supabase over the internet. The phone does not need to open the laptop's localhost address. This local server is for testing; a public pilot needs HTTPS hosting.
+The phone and laptop each access Supabase over the internet. The phone does not need the laptop's localhost address.
 
-## 5. Verify the shared complaint flow
+## 5. Rehearse one complete complaint
 
-1. On the rebuilt citizen app, capture a real photo of garbage, lock the actual GPS location, choose one of the five categories, and submit. Note the complaint ID.
-2. On the officer dashboard, wait for refresh or refresh manually. Confirm the same ID, photo, category, and coordinates.
-3. Select the responsible officer, change the status to **In Progress**, and add a clear note. If a field team is involved, include its name/task in that note. Save.
-4. On the citizen app, refresh and confirm the same status and note appear.
-5. Try resolving without a cleanup photo: it must be refused. Then attach an appropriate after-cleaning photo, add the resolution note, and save **Resolved**.
-6. On the citizen app, confirm **Resolved**, the after-photo, and the full history. Test private access with a second citizen account using the detailed checklist before a live pilot.
+1. Enter test citizen details, capture a real garbage photo and GPS, choose a category, and submit. Record the complaint ID.
+2. Confirm that same ID, photo, coordinates, name, and entered mobile appear on the officer dashboard.
+3. Change the status to **In Progress**, select the responsible officer, add a clear action note, and save.
+4. Refresh the citizen app and confirm the status/note changed.
+5. Try resolving without a cleanup photo: it must fail. Attach an appropriate after-photo and resolution note, then save **Resolved**.
+6. Confirm the citizen sees Resolved, the after-photo, and history. Restart the citizen app and confirm its same-phone history remains available.
 
-Use clearly labeled test reports for rehearsal. Do not present a test after-photo as evidence of an actual cleanup. The current verification label is manual review; real Gemini screening is a later step.
+Label rehearsals as test reports; a test after-photo is not proof of municipal cleanup. AI and automatic escalation remain planned. Do not present them as working features.
 
-## If something fails
+## Troubleshooting
 
-- **Login fails:** check that you are using the correct existing account, confirmed email, and password. Citizen accounts cannot enter the officer dashboard.
-- **The old app still shows random AI results or local-only reports:** verify that you installed the rebuilt APK rather than the earlier APK.
-- **No shared complaint appears:** record the app's submission error, check internet/project configuration, and check whether a row exists in Supabase's `complaints` table. Do not create a fake row to hide a failed submission.
-- **Dashboard remembers another project:** replace its connection values with the ones above, then sign in again.
-- **“Complaint changed” while saving:** reload the current record, review the other update, and reapply your note/status.
-- **Port 8000 is occupied:** use another port in the command and open that same port in the browser.
+- **Guest reporting disabled:** complete step 1 and retry Continue.
+- **Email/password screen still appears:** you are using the old APK or have not applied the revised source.
+- **No shared complaint:** inspect the submission error and check internet/project configuration. Check whether Supabase has the complaint row.
+- **Officer access denied:** use the provisioned officer account. A guest citizen has no officer permissions.
+- **Complaint changed:** reload its current version and reapply the update.
+- **Port occupied:** choose another port and open that port in the browser.
 
-The source/API tests have passed, but the native build and live phone/dashboard test have not yet been completed here. Record the result of those steps before claiming the integration works.
+The source/backend checks pass. Native compilation and the actual installed-app/dashboard test still need to be completed.

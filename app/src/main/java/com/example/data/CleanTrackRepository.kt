@@ -21,19 +21,22 @@ class CleanTrackRepository(context: Context) {
     private val signedImages = mutableMapOf<String, Pair<String, Long>>()
     fun hasSession() = api.hasSession()
     fun logout() { api.clearSession(); signedImages.clear() }
-    suspend fun login(email: String, password: String): UserEntity {
-        api.signIn(email, password); return currentUser()
-    }
-    suspend fun register(name: String, email: String, password: String): UserEntity? {
-        if (!api.signUp(name, email, password)) return null
+    suspend fun startCitizen(name: String, mobile: String): UserEntity {
+        // The prototype keeps one guest identity per app installation.
+        if (api.hasSession() && !api.isAnonymousSession) api.clearSession()
+        if (!api.hasSession()) api.startGuest(name, mobile)
         return currentUser()
     }
     suspend fun currentUser(): UserEntity {
         val auth = JSONObject(api.request("/auth/v1/user"))
-        val rows = JSONArray(api.request("/rest/v1/profiles?id=eq.${auth.getString("id")}&select=id,full_name,role"))
+        require(auth.optBoolean("is_anonymous", false)) { "Enter your name and mobile number to continue." }
+        val rows = JSONArray(api.request("/rest/v1/profiles?id=eq.${auth.getString("id")}&select=id,full_name,role,mobile_number"))
         if (rows.length() != 1) throw Exception("Profile not found. Run the CleanTrack database migration.")
         val profile = rows.getJSONObject(0)
-        return UserEntity(profile.getString("id"), profile.getString("full_name"), auth.optString("email"), "")
+        require(profile.getString("role") == "citizen") { "This Android app is for citizen reporting." }
+        val mobile = profile.optString("mobile_number", "")
+        require(Regex("[6-9][0-9]{9}").matches(mobile)) { "Citizen details are missing. Check the guest-details database migration." }
+        return UserEntity(profile.getString("id"), profile.getString("full_name"), "", "", mobile)
     }
     suspend fun getCitizenComplaints(user: UserEntity): List<ComplaintEntity> {
         val rows = JSONArray(api.request("/rest/v1/complaints?citizen_id=eq.${user.id}&select=*&order=created_at.desc&limit=100"))

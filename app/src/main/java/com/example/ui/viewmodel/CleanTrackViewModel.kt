@@ -53,7 +53,7 @@ class CleanTrackViewModel(application: Application) : AndroidViewModel(applicati
             _isAuthenticating.value = true
             try { _authState.value = AuthState.Authenticated(repository.currentUser()) }
             catch (e: CancellationException) { throw e }
-            catch (e: Exception) { _authError.value = e.message ?: "Sign in again." }
+            catch (e: Exception) { _authError.value = e.message ?: "Unable to restore your reports. Check your connection and retry." }
             finally { _isAuthenticating.value = false }
         }
     }
@@ -75,32 +75,19 @@ class CleanTrackViewModel(application: Application) : AndroidViewModel(applicati
     fun clearAuthError() { _authError.value = null }
     fun clearSubmissionMessage() { _submissionSuccessMessage.value = null }
 
-    fun loginCitizen(emailInput: String, passwordInput: String) {
+    fun continueCitizen(nameInput: String, mobileInput: String) {
         if (_isAuthenticating.value) return
         _isAuthenticating.value = true
         authJob = viewModelScope.launch {
             try {
-                require(emailInput.isNotBlank() && passwordInput.isNotBlank()) { "Enter email and password." }
-                _authState.value = AuthState.Authenticated(repository.login(emailInput.trim(), passwordInput))
+                val name = nameInput.trim()
+                val mobile = mobileInput.trim()
+                require(name.length in 1..100) { "Enter your name (1 to 100 characters)." }
+                require(Regex("[6-9][0-9]{9}").matches(mobile)) { "Enter a 10-digit Indian mobile number." }
+                _authState.value = AuthState.Authenticated(repository.startCitizen(name, mobile))
                 _authError.value = null
             } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { _authError.value = e.message ?: "Sign in failed." }
-            finally { _isAuthenticating.value = false }
-        }
-    }
-    fun registerCitizen(nameInput: String, emailInput: String, passwordInput: String) {
-        if (_isAuthenticating.value) return
-        _isAuthenticating.value = true
-        authJob = viewModelScope.launch {
-            try {
-                require(nameInput.trim().length in 1..100 && emailInput.isNotBlank() && passwordInput.length >= 8) {
-                    "Enter your name, email, and a password of at least 8 characters."
-                }
-                val user = repository.register(nameInput.trim(), emailInput.trim(), passwordInput)
-                if (user != null) { _authState.value = AuthState.Authenticated(user); _authError.value = null }
-                else _authError.value = "Check your email to confirm the account, then sign in."
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { _authError.value = e.message ?: "Registration failed." }
+            catch (e: Exception) { _authError.value = e.message ?: "Unable to continue. Check your connection and try again." }
             finally { _isAuthenticating.value = false }
         }
     }
@@ -130,7 +117,7 @@ class CleanTrackViewModel(application: Application) : AndroidViewModel(applicati
         val photo = _capturedPhotoUri.value
         val loc = _capturedLocation.value
         if (photo == null || loc == null || _authState.value !is AuthState.Authenticated) {
-            _submissionSuccessMessage.value = "Sign in, capture a photo, and capture GPS before submitting."; return
+            _submissionSuccessMessage.value = "Enter your details, capture a photo, and capture GPS before submitting."; return
         }
         val category = _selectedCategory.value
         val description = _reportDescription.value.ifBlank { null }

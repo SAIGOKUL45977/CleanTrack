@@ -1,44 +1,41 @@
-# CleanTrack project constraints
+# CleanTrack CSP scope after Review 0
 
-This file records the agreed product scope and distinguishes the prepared migration from features that still need implementation or live testing. It supersedes stale setup claims in the imported Claude handoff, not the team's review documents.
+## Purpose and architecture
 
-## Fixed purpose
+- Brand: CleanTrack.
+- Official title supplied in the handoff: AI-Based Smart Community Waste Monitoring & Complaint Management System.
+- Formal wording uses waste; citizen reporting actions can use garbage.
+- Native Kotlin/Compose citizen app and a separate officer web dashboard.
+- The team operates the prototype for college demonstrations; municipal adoption is not claimed.
 
-- Brand: **CleanTrack**.
-- Official title supplied in the project handoff: **AI-Based Smart Community Waste Monitoring & Complaint Management System**.
-- Formal project wording uses **waste**; citizen reporting actions can use **garbage**.
-- Community/municipal complaint reporting and accountable handling, with citizen status tracking.
-- Citizen app: native Android, Kotlin/Jetpack Compose, self-registration as a citizen only.
-- Officer interface: separate web dashboard, administrator-provisioned accounts only.
+## Citizen entry
 
-## Reporting and access rules
+- Name and mobile number only, with Continue.
+- No citizen email/password screen, Aadhaar field, or OTP in this demonstration.
+- A private guest identity persists behind the UI so each installation owns its reports.
+- Entered contact details are not verified identity. A typed mobile number cannot authorize complaint retrieval.
+- Same-installation history only. No cross-device recovery or citizen sign-out button.
+- Officer email/password login and administrator-controlled role assignment remain.
 
-- Live camera capture and actual device GPS; no gallery import, manual location, or synthetic evidence in the citizen reporting flow.
+## Reporting rules
+
+- Actual live camera capture and device GPS; no gallery/manual location/synthetic evidence.
 - Exactly five categories: Overflowing Waste Bin; Plastic Waste Accumulation; Organic/Food Waste; Dry Leaf & Bio Litter; E-Waste Disposal.
-- Citizens can read their own reports and cannot edit/delete submitted complaints.
-- An officer must provide a note for an update. Resolution requires a stored cleanup photo.
-- Private photo storage and guarded database writes; no client-selectable officer role.
-- A required after-photo provides an evidence record. The current app does not independently prove its authenticity or that cleanup happened at the original coordinates.
+- Citizens read only their own reports and cannot edit/delete after submission.
+- Officer updates require notes. Resolution requires a stored cleanup photo.
+- Assignment identifies a responsible officer; field-team details can be recorded in notes.
+- Private complaint-images bucket, guarded RPC writes, and protected role records.
 
-## AI boundary
+## Planned features
 
-The intended AI feature checks whether a photo genuinely shows garbage. Its eventual user-facing results are **Verified**, **Pending Manual Review**, or **Rejected**. No severity score, confidence percentage, automatic category detection, or hazardous/chemical category belongs in this scope.
+AI checks image relevance only, with future results Verified, Pending Manual Review, or Rejected. The current version has manual review, not a deployed Gemini function. No severity score, confidence percentage, extra hazardous/chemical category, or automatic category detection.
 
-The current Supabase migration uses **manual review**. It removes the original random AI result and does not contain a deployed Gemini Edge Function. Do not imply that selecting Supabase activates AI. Add server-side screening, safe manual fallback, and tests after the shared complaint flow works.
+Deadline-based escalation remains planned. Authority hierarchy and time limits are unconfirmed. Later demonstration rules must be labeled as such and must not imply notification of real municipal authorities. Changing a report to In Progress should not restart the resolution deadline.
 
-## Current implementation boundaries
+Reverse-geocoded addresses, notifications, Realtime subscriptions, offline queues, ward-level access, and Firebase-history migration are not implemented. Current GPS text is coordinates and status refresh uses polling.
 
-- The configured backend is `cleantrack-csp`; its actual schema uses bigint complaint IDs, a separate `complaint_events` table, `full_name` profiles, guarded RPCs, and the private `complaint-images` bucket. Do not substitute the imported handoff's older UUID schema, public `complaint-photos` bucket, or `status_history` JSON contract.
-- Assignment identifies a responsible officer. Field-team details may be written in notes; a structured team directory is future work.
-- Android currently records GPS coordinates as location text. Reverse-geocoded street addresses are future work.
-- Status refresh uses polling, not Supabase Realtime subscriptions. Push/SMS/email notifications, offline queues, and ward-specific officer permissions are future work.
-- Legacy local demo data and historical Firebase records have not been migrated.
-- Source checks and database-role tests are complete; the installed Android APK and officer dashboard have not yet passed the live two-device test.
+## Demonstration integrity
 
-## Excluded scope
+No simulated feature should be described as real integration. Test photos/records and dummy interview notes remain labeled. A required after-photo records evidence but does not independently prove cleanup authenticity or location.
 
-CCTV/drone monitoring, continuous surveillance, garbage-truck routing, IoT infrastructure, and rewards/points are outside this project. Do not add them as shortcuts to an AI or “smart city” claim.
-
-## Review evidence
-
-The Review 0 deck retains the user's requested Firebase framing and states prototype limitations. This Supabase package is subsequent development work. Field photos and approved demo/dummy interview placeholders must remain clearly distinguished from verified interview data. Do not claim municipal adoption, community impact, AI accuracy, or a connected production system without evidence.
+CCTV/drone monitoring, IoT, vehicle routing, rewards, and claims of municipal adoption are outside this prototype. Keep the next presentation centered on working features. Review 0 is complete; the next review date is not yet announced.

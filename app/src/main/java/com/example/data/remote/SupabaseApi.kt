@@ -25,6 +25,7 @@ class SupabaseApi(context: Context) {
     @Volatile private var session: JSONObject? = store.read()
     @Volatile private var generation = 0
     val userId: String? get() = session?.optJSONObject("user")?.optString("id")
+    val isAnonymousSession: Boolean get() = session?.optJSONObject("user")?.optBoolean("is_anonymous", false) == true
     private fun configured() {
         require(url.startsWith("https://") && !url.contains("REPLACE") && key.isNotBlank() && !key.contains("REPLACE")) {
             "Configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in .env, then rebuild the app."
@@ -39,21 +40,22 @@ class SupabaseApi(context: Context) {
         if (!data.has("expires_at")) data.put("expires_at", System.currentTimeMillis() / 1000 + data.optLong("expires_in", 3600))
         store.write(data); session = data
     }
-    suspend fun signIn(email: String, password: String) {
-        val data = JSONObject(raw("/auth/v1/token?grant_type=password", "POST",
-            JSONObject().put("email", email).put("password", password).toString().toByteArray(), null))
+    suspend fun startGuest(name: String, mobile: String) {
+        val body = JSONObject().put("data", JSONObject().put("full_name", name).put("mobile_number", mobile))
+        val data = try { JSONObject(raw("/auth/v1/signup", "POST", body.toString().toByteArray(), null)) }
+        catch (e: SupabaseHttpException) {
+            if (e.message?.contains("anonymous", true) == true) {
+                throw Exception("Guest reporting needs one setup step: enable Anonymous Sign-Ins in Supabase Authentication settings.")
+            }
+            throw e
+        }
+        require(data.optString("access_token").isNotBlank()) { "Unable to start reporting. Try again." }
         generation++; save(data)
-    }
-    suspend fun signUp(name: String, email: String, password: String): Boolean {
-        val data = JSONObject(raw("/auth/v1/signup", "POST", JSONObject().put("email", email)
-            .put("password", password).put("data", JSONObject().put("full_name", name)).toString().toByteArray(), null))
-        if (data.optString("access_token").isBlank()) return false
-        generation++; save(data); return true
     }
     fun clearSession() { generation++; session = null; store.clear() }
     fun hasSession() = session != null
     private suspend fun accessToken(force: Boolean = false, failedToken: String? = null): String = refreshLock.withLock {
-        val current = session ?: throw Exception("Please sign in again.")
+        val current = session ?: throw Exception("Enter your details to start reporting.")
         val token = current.getString("access_token")
         if (force && failedToken != null && token != failedToken) return@withLock token
         if (!force && current.optLong("expires_at") > System.currentTimeMillis() / 1000 + 60) return@withLock token
@@ -61,7 +63,7 @@ class SupabaseApi(context: Context) {
         try {
             val updated = JSONObject(raw("/auth/v1/token?grant_type=refresh_token", "POST",
                 JSONObject().put("refresh_token", current.getString("refresh_token")).toString().toByteArray(), null))
-            if (before != generation) throw Exception("The session changed. Please sign in again.")
+            if (before != generation) throw Exception("The reporting session changed. Try again.")
             save(updated); updated.getString("access_token")
         } catch (e: SupabaseHttpException) {
             if (e.code == 400 || e.code == 401 || e.code == 403) clearSession()
