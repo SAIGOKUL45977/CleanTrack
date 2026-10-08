@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.example.ui.screens.AuthScreen
+import com.example.ui.screens.CitizenDetailsScreen
 import com.example.ui.screens.CitizenHomeScreen
 import com.example.ui.theme.CleanTrackTheme
 import com.example.ui.viewmodel.AuthState
@@ -40,7 +40,7 @@ fun CleanTrackApp(viewModel: CleanTrackViewModel) {
 
     when (val state = authState) {
         is AuthState.Unauthenticated -> {
-            AuthScreen(viewModel = viewModel)
+            CitizenDetailsScreen(viewModel = viewModel)
         }
         is AuthState.Authenticated -> {
             CitizenHomeScreen(

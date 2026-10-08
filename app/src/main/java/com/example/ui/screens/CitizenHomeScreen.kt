@@ -37,6 +37,7 @@ import com.example.ui.components.AutoLocationCapture
 import com.example.ui.components.LiveCameraCapture
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.CleanTrackViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,13 +51,14 @@ fun CitizenHomeScreen(
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) } // 0 = Report Issue, 1 = My Complaints
 
-    val complaints by viewModel.citizenComplaints.collectAsState()
+    val complaints by viewModel.citizenComplaints.collectAsStateWithLifecycle()
     val reportStep by viewModel.reportStep.collectAsState()
     val capturedPhotoUri by viewModel.capturedPhotoUri.collectAsState()
     val capturedLocation by viewModel.capturedLocation.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val reportDescription by viewModel.reportDescription.collectAsState()
     val isSubmitting by viewModel.isSubmitting.collectAsState()
+    val syncError by viewModel.syncError.collectAsStateWithLifecycle()
     val submissionMessage by viewModel.submissionSuccessMessage.collectAsState()
 
     var activeComplaintForDetail by remember { mutableStateOf<ComplaintEntity?>(null) }
@@ -68,6 +70,10 @@ fun CitizenHomeScreen(
             snackbarHostState.showSnackbar(msg)
             viewModel.clearSubmissionMessage()
         }
+    }
+
+    LaunchedEffect(syncError) {
+        syncError?.let { snackbarHostState.showSnackbar("Refresh failed: $it. Showing the last downloaded data.") }
     }
 
     Scaffold(
@@ -88,9 +94,7 @@ fun CitizenHomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.logout() }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Logout")
-                    }
+                    TextButton(onClick = { viewModel.refreshComplaints() }) { Text("Refresh") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -155,7 +159,7 @@ fun CitizenHomeScreen(
     // Detail Dialog with Status History Timeline
     if (activeComplaintForDetail != null) {
         CitizenComplaintDetailModal(
-            complaint = activeComplaintForDetail!!,
+            complaint = complaints.firstOrNull { it.id == activeComplaintForDetail!!.id } ?: activeComplaintForDetail!!,
             onDismiss = { activeComplaintForDetail = null }
         )
     }
