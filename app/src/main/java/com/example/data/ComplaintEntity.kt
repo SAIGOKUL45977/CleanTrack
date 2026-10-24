@@ -43,7 +43,7 @@ data class ComplaintEntity(
     val locationAddress: String,
     val description: String?,
     val status: String,
-    val aiCheckResult: String, // "AI Verified", "Pending Manual Review", or "Rejected"
+    val aiCheckResult: String, // Server verification label; AI screening is not configured
     val createdAt: Long = System.currentTimeMillis(),
     val statusHistoryJson: String // Serialized JSONArray
 ) {

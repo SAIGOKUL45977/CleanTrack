@@ -242,9 +242,7 @@ fun LiveCameraCapture(
                                         },
                                         onError = { exc ->
                                             isCapturing = false
-                                            // Fallback to synthetic capture if physical camera fails
-                                            val fallbackUri = generateSyntheticWastePhoto(context, titleText)
-                                            capturedUri = fallbackUri
+                                            errorMessage = "Photo capture failed: ${exc.localizedMessage}. Please retry."
                                         }
                                     )
                                 }
@@ -309,17 +307,11 @@ fun LiveCameraCapture(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    // Option to capture sample photo in virtual/emulator mode
-                    TextButton(
-                        onClick = {
-                            val uri = generateSyntheticWastePhoto(context, titleText)
-                            capturedUri = uri
-                        }
-                    ) {
-                        Text("Simulate Camera Snapshot")
-                    }
+                    Text("Use a physical phone to capture a real complaint photo.", textAlign = TextAlign.Center)
                 }
             }
+
+            errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
             if (onCancel != null) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -359,60 +351,3 @@ private fun takePhoto(
     )
 }
 
-/**
- * Creates a valid bitmap file representing a complaint or after-cleaning photo
- * as a safety fallback when running in environment without physical camera hardware.
- */
-fun generateSyntheticWastePhoto(context: Context, label: String): Uri {
-    val width = 800
-    val height = 600
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-
-    val isAfter = label.contains("Resolved", ignoreCase = true) || label.contains("After", ignoreCase = true)
-
-    // Background gradient
-    val bgPaint = Paint().apply {
-        color = if (isAfter) Color.rgb(220, 245, 235) else Color.rgb(245, 230, 215)
-    }
-    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
-
-    // Draw frame line
-    val borderPaint = Paint().apply {
-        color = if (isAfter) Color.rgb(14, 110, 100) else Color.rgb(180, 80, 40)
-        strokeWidth = 16f
-        style = Paint.Style.STROKE
-    }
-    canvas.drawRect(20f, 20f, (width - 20).toFloat(), (height - 20).toFloat(), borderPaint)
-
-    // Icon / Label Text
-    val textPaint = Paint().apply {
-        color = if (isAfter) Color.rgb(14, 110, 100) else Color.rgb(120, 50, 20)
-        textSize = 42f
-        isAntiAlias = true
-        textAlign = Paint.Align.CENTER
-        isFakeBoldText = true
-    }
-
-    val dateStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-    val textLabel = if (isAfter) "CLEANTRACK AFTER-CLEANING PHOTO" else "CLEANTRACK INCIDENT PHOTO"
-
-    canvas.drawText(textLabel, (width / 2).toFloat(), 260f, textPaint)
-
-    val subPaint = Paint().apply {
-        color = Color.DKGRAY
-        textSize = 30f
-        isAntiAlias = true
-        textAlign = Paint.Align.CENTER
-    }
-    canvas.drawText("Live Snapshot Captured at $dateStr", (width / 2).toFloat(), 340f, subPaint)
-
-    val file = File(
-        context.cacheDir,
-        "cleantrack_snap_${System.currentTimeMillis()}.jpg"
-    )
-    FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-    }
-    return Uri.fromFile(file)
-}

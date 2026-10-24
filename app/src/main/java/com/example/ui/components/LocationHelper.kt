@@ -48,67 +48,32 @@ fun AutoLocationCapture(
     var locationError by remember { mutableStateOf<String?>(null) }
 
     fun captureGpsNow() {
-        isFetching = true
         locationError = null
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+        if (!locationPermissionState.status.isGranted) {
+            locationPermissionState.launchPermissionRequest()
+            locationError = "Allow precise location, then tap Capture again."
+            return
+        }
+        isFetching = true
+        try {
+            LocationServices.getFusedLocationProviderClient(context)
+                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                 .addOnSuccessListener { loc: Location? ->
                     isFetching = false
-                    if (loc != null) {
-                        val formattedAddr = "Lat: %.4f°, Lng: %.4f° (Zone 4 - Ward 12)".format(loc.latitude, loc.longitude)
-                        onLocationCaptured(
-                            CapturedLocation(
-                                latitude = loc.latitude,
-                                longitude = loc.longitude,
-                                address = formattedAddr
-                            )
-                        )
+                    if (loc == null) {
+                        locationError = "No GPS fix. Enable Location, move outdoors, and retry."
                     } else {
-                        // Fallback simulated GPS reading for container environment
-                        val mockLat = 12.9716 + (Math.random() - 0.5) * 0.01
-                        val mockLng = 77.5946 + (Math.random() - 0.5) * 0.01
-                        val formattedAddr = "Lat: %.4f°, Lng: %.4f° (Zone 4 - Ward 12)".format(mockLat, mockLng)
-                        onLocationCaptured(
-                            CapturedLocation(
-                                latitude = mockLat,
-                                longitude = mockLng,
-                                address = formattedAddr
-                            )
-                        )
+                        onLocationCaptured(CapturedLocation(loc.latitude, loc.longitude,
+                            "Lat: %.6f°, Lng: %.6f° (device GPS)".format(java.util.Locale.US, loc.latitude, loc.longitude)))
                     }
                 }
                 .addOnFailureListener {
                     isFetching = false
-                    val mockLat = 12.9716 + (Math.random() - 0.5) * 0.01
-                    val mockLng = 77.5946 + (Math.random() - 0.5) * 0.01
-                    val formattedAddr = "Lat: %.4f°, Lng: %.4f° (Zone 4 - Ward 12)".format(mockLat, mockLng)
-                    onLocationCaptured(
-                        CapturedLocation(
-                            latitude = mockLat,
-                            longitude = mockLng,
-                            address = formattedAddr
-                        )
-                    )
+                    locationError = "GPS capture failed. Enable Location and retry on a physical phone."
                 }
-        } else {
-            // Permission missing
-            locationPermissionState.launchPermissionRequest()
+        } catch (_: Exception) {
             isFetching = false
-            // Fallback for instant responsive demo
-            val mockLat = 12.9716 + (Math.random() - 0.5) * 0.01
-            val mockLng = 77.5946 + (Math.random() - 0.5) * 0.01
-            val formattedAddr = "Lat: %.4f°, Lng: %.4f° (Zone 4 - Ward 12)".format(mockLat, mockLng)
-            onLocationCaptured(
-                CapturedLocation(
-                    latitude = mockLat,
-                    longitude = mockLng,
-                    address = formattedAddr
-                )
-            )
+            locationError = "Location permission or Google Play services is unavailable. Retry on a supported phone."
         }
     }
 
@@ -140,6 +105,7 @@ fun AutoLocationCapture(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+            locationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
             if (currentLocation != null) {
                 Row(
@@ -195,7 +161,7 @@ fun AutoLocationCapture(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Acquiring Satellite Lock...")
+                        Text("Getting device location…")
                     } else {
                         Icon(Icons.Default.MyLocation, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))

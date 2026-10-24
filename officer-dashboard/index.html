@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>CleanTrack · Officer desk</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="login-view" class="login-shell">
+  <section class="intro">
+    <div class="brand"><span class="brand-mark">C</span> CleanTrack</div>
+    <p class="eyebrow">COMMUNITY SERVICE PROJECT</p>
+    <h1>Every report.<br>A cleaner neighbourhood.</h1>
+    <p class="intro-copy">Review citizen reports, coordinate cleanup, and close the loop with photo evidence.</p>
+    <div class="intro-foot"><span class="dot"></span> Citizen app + officer desk · one shared record</div>
+  </section>
+  <main class="login-card">
+    <p class="eyebrow teal">OFFICER DESK</p><h2>Welcome back</h2>
+    <p class="muted">Sign in with your assigned officer account.</p>
+    <form id="login-form">
+      <details id="connection"><summary>Supabase connection</summary>
+        <label>Project URL<input id="project-url" type="url" required placeholder="https://your-project.supabase.co" autocomplete="url"></label>
+        <label>Publishable / anon key<input id="project-key" required placeholder="sb_publishable_…" autocomplete="off" spellcheck="false"></label>
+        <p class="hint">Use the public client key. Officer permissions are checked by the database.</p>
+      </details>
+      <label>Email<input id="email" type="email" required autocomplete="username" placeholder="officer@example.com"></label>
+      <label>Password<input id="password" type="password" required autocomplete="current-password"></label>
+      <button id="login-button" class="primary" type="submit">Sign in to officer desk <span>→</span></button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+    <p class="hint">Accounts are created in Supabase Auth. Officer access is assigned by the project administrator.</p>
+  </main>
+</div>
+<div id="desk-view" hidden>
+  <header class="topbar"><div class="brand"><span class="brand-mark">C</span> CleanTrack <span class="desk-label">Officer desk</span></div>
+    <div class="top-actions"><span id="officer-name"></span><button id="logout" class="quiet">Sign out</button></div>
+  </header>
+  <main class="workspace">
+    <div class="page-heading"><div><p class="eyebrow teal">CLEANUP OPERATIONS</p><h1>Community reports</h1><p class="muted">Review, assign, and update reports from the citizen app.</p></div>
+      <div class="sync-controls"><span id="sync-status" class="hint" aria-live="polite">Loading…</span><button id="refresh" class="secondary">↻ Refresh</button></div></div>
+    <div id="desk-error" class="error-banner" hidden role="alert"></div>
+    <section class="metrics" aria-label="Report counts">
+      <article><span>All reports</span><strong id="count-all">0</strong><small>Shared complaint queue</small></article>
+      <article><span>Awaiting review</span><strong id="count-review">0</strong><small>Submitted or manual review</small></article>
+      <article><span>In progress</span><strong id="count-progress">0</strong><small>Cleanup underway</small></article>
+      <article><span>Resolved</span><strong id="count-resolved">0</strong><small>Cleanup photo attached</small></article>
+    </section>
+    <div class="work-grid">
+      <section class="queue panel"><div class="panel-heading"><h2>Complaint queue</h2><span id="queue-count" class="pill">0 reports</span></div>
+        <div class="filters"><label class="search-label">Search<input id="search" type="search" placeholder="ID, citizen, location…"></label>
+          <div class="filter-row"><label>Status<select id="filter-status"><option value="">All statuses</option></select></label>
+            <label>Category<select id="filter-category"><option value="">All categories</option></select></label></div></div>
+        <div id="queue-list" class="queue-list" aria-live="polite"></div>
+      </section>
+      <section id="detail-panel" class="detail panel" aria-label="Selected complaint">
+        <div id="detail-empty" class="empty"><span class="empty-symbol">↗</span><h2>Select a report</h2><p>Its photo, location, and complete review history will appear here.</p></div>
+        <div id="detail-content" hidden>
+          <div class="panel-heading"><div><p id="detail-id" class="eyebrow teal"></p><h2 id="detail-category"></h2></div><span id="detail-status" class="status"></span></div>
+          <div class="detail-body">
+            <div class="photos"><figure><img id="before-image" alt="Citizen report photo"><figcaption>Citizen report</figcaption></figure>
+              <figure id="after-figure" hidden><img id="after-image" alt="Cleanup evidence photo"><figcaption>Cleanup evidence</figcaption></figure></div>
+            <p id="photo-error" class="error"></p>
+            <div class="facts"><div><span>Reported by</span><strong id="detail-citizen"></strong></div><div><span>Reported on</span><strong id="detail-date"></strong></div><div><span>Mobile (entered by citizen)</span><strong id="detail-mobile"></strong></div></div>
+            <p id="detail-address" class="location"></p><a id="map-link" class="map-link" target="_blank" rel="noopener noreferrer">Open location in Maps ↗</a>
+            <p id="detail-description" class="description"></p><p class="manual-label">Manual officer review · AI screening is not configured</p>
+            <div id="conflict" class="conflict" hidden>This report changed elsewhere. Reload the details before saving. <button id="reload-detail" class="quiet" type="button">Reload details</button></div>
+            <form id="update-form"><h3>Update this report</h3><div class="filter-row"><label>Status<select id="update-status" required></select></label>
+              <label>Assigned officer<select id="assigned-officer"><option value="">Unassigned</option></select></label></div>
+              <label>Officer note<textarea id="officer-note" required maxlength="2000" rows="3" placeholder="Describe the action taken or the reason for your decision."></textarea></label>
+              <label class="upload-label">Cleanup photo<input id="cleanup-file" type="file" accept="image/jpeg,image/png,image/webp"><span class="hint">JPG, PNG or WebP · maximum 5 MB · required to resolve</span></label>
+              <div class="save-row"><button id="save-button" class="primary" type="submit">Save update</button><span id="save-status" class="hint" aria-live="polite"></span></div>
+            </form>
+            <section class="history"><h3>Report history</h3><ol id="history-list"></ol></section>
+          </div>
+        </div>
+      </section>
+    </div>
+    <footer>CleanTrack CSP pilot · Updates refresh every 5 seconds while this tab is visible.</footer>
+  </main>
+</div>
+<script type="module" src="app.mjs"></script>
+</body>
+</html>
